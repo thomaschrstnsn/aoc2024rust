@@ -9,11 +9,13 @@ struct Input<'a>(Vec<&'a str>);
 struct Vec2<T>(T, T);
 
 impl Vec2<usize> {
-    fn add_signed(&self, other: &Vec2<isize>) -> Self {
-        Vec2(
-            self.0.overflowing_add_signed(other.0).0,
-            self.1.overflowing_add_signed(other.1).0,
-        )
+    fn add_signed(&self, other: &Vec2<isize>) -> Option<Self> {
+        let (r0, o0) = self.0.overflowing_add_signed(other.0);
+        let (r1, o1) = self.1.overflowing_add_signed(other.1);
+        if o0 || o1 {
+            return None;
+        }
+        Some(Self(r0, r1))
     }
 }
 
@@ -57,6 +59,8 @@ impl<'a> Input<'a> {
     ) -> Vec<char> {
         (0..)
             .map(|i| start.add_signed(&direction.mul(i)))
+            .take_while(|c| c.is_some())
+            .map(|c| c.unwrap())
             .map(|p| self.get(&p))
             .take_while(|c| c.is_some())
             .map(|c| c.unwrap())
@@ -107,13 +111,14 @@ fn mas_marks_the_x(point: &Point, input: &Input) -> usize {
     if char_at_point == TARGET[0] || char_at_point == TARGET_REV[0] {
         let down_right = input.get_n_chars_in_direction(3, point, &Vec2(1, 1));
 
-        let other_start = point.add_signed(&Vec2(0, 2));
-        let up_right = input.get_n_chars_in_direction(3, &other_start, &Vec2(1, -1));
+        if let Some(other_start) = point.add_signed(&Vec2(0, 2)) {
+            let up_right = input.get_n_chars_in_direction(3, &other_start, &Vec2(1, -1));
 
-        if (down_right == TARGET || down_right == TARGET_REV)
-            && (up_right == TARGET || up_right == TARGET_REV)
-        {
-            return 1;
+            if (down_right == TARGET || down_right == TARGET_REV)
+                && (up_right == TARGET || up_right == TARGET_REV)
+            {
+                return 1;
+            }
         }
     }
     0
