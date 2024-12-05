@@ -99,8 +99,36 @@ pub fn part_one(input: &str) -> Option<usize> {
     Some(sum)
 }
 
-pub fn part_two(input: &str) -> Option<u32> {
-    None
+fn mas_marks_the_x(point: &Point, input: &Input) -> usize {
+    const TARGET: &[char] = &['M', 'A', 'S'];
+    const TARGET_REV: &[char] = &['S', 'A', 'M'];
+
+    let char_at_point = input.get(point).unwrap();
+    if char_at_point == TARGET[0] || char_at_point == TARGET_REV[0] {
+        let down_right = input.get_n_chars_in_direction(3, point, &Vec2(1, 1));
+
+        let other_start = point.add_signed(&Vec2(0, 2));
+        let up_right = input.get_n_chars_in_direction(3, &other_start, &Vec2(1, -1));
+
+        if (down_right == TARGET || down_right == TARGET_REV)
+            && (up_right == TARGET || up_right == TARGET_REV)
+        {
+            return 1;
+        }
+    }
+    0
+}
+
+pub fn part_two(input: &str) -> Option<usize> {
+    let input = Input::from_str(input)?;
+
+    let mut sum = 0;
+    for x in 0..input.columns() {
+        for y in 0..input.rows() {
+            sum += mas_marks_the_x(&Vec2(x, y), &input);
+        }
+    }
+    Some(sum)
 }
 
 #[cfg(test)]
@@ -116,6 +144,6 @@ mod tests {
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(9));
     }
 }
