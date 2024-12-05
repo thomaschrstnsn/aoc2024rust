@@ -51,21 +51,30 @@ impl<'a> Input<'a> {
         self.0.get(p.0)?.chars().nth(p.1)
     }
 
-    fn get_n_chars_in_direction(
-        &self,
+    fn get_n_chars_in_direction<'b>(
+        &'a self,
         n: usize,
-        start: &Point,
-        direction: &Direction,
-    ) -> Vec<char> {
+        start: &'b Point,
+        direction: &'b Direction,
+    ) -> impl Iterator<Item = char> + use<'a, 'b> {
         (0..)
             .map(|i| start.add_signed(&direction.mul(i)))
-            .take_while(|c| c.is_some())
-            .map(|c| c.unwrap())
+            .take_while(Option::is_some)
+            .map(Option::unwrap)
             .map(|p| self.get(&p))
-            .take_while(|c| c.is_some())
-            .map(|c| c.unwrap())
+            .take_while(Option::is_some)
+            .map(Option::unwrap)
             .take(n)
-            .collect()
+    }
+
+    fn is_same_as_in_direction<const N: usize>(
+        &self,
+        chars: [char; N],
+        start: &Point,
+        direction: &Direction,
+    ) -> bool {
+        self.get_n_chars_in_direction(chars.len(), start, direction)
+            .eq(chars)
     }
 }
 
@@ -80,12 +89,11 @@ fn x_marks_the_spot(point: &Point, input: &Input) -> usize {
         Vec2(0, -1),
         Vec2(1, -1),
     ];
-    const TARGET: &[char] = &['X', 'M', 'A', 'S'];
+    const TARGET: [char; 4] = ['X', 'M', 'A', 'S'];
     if input.get(point).unwrap() == 'X' {
         return DIRECTIONS
             .iter()
-            .map(|d| input.get_n_chars_in_direction(TARGET.len(), point, d))
-            .filter(|v| v == TARGET)
+            .filter(|d| input.is_same_as_in_direction(TARGET, point, d))
             .count();
     }
     0
@@ -104,18 +112,20 @@ pub fn part_one(input: &str) -> Option<usize> {
 }
 
 fn mas_marks_the_x(point: &Point, input: &Input) -> usize {
-    const TARGET: &[char] = &['M', 'A', 'S'];
-    const TARGET_REV: &[char] = &['S', 'A', 'M'];
+    const TARGET: [char; 3] = ['M', 'A', 'S'];
+    const TARGET_REV: [char; 3] = ['S', 'A', 'M'];
 
     let char_at_point = input.get(point).unwrap();
     if char_at_point == TARGET[0] || char_at_point == TARGET_REV[0] {
         let down_right = input.get_n_chars_in_direction(3, point, &Vec2(1, 1));
+        let down_right2 = input.get_n_chars_in_direction(3, point, &Vec2(1, 1));
 
         if let Some(other_start) = point.add_signed(&Vec2(0, 2)) {
             let up_right = input.get_n_chars_in_direction(3, &other_start, &Vec2(1, -1));
+            let up_right2 = input.get_n_chars_in_direction(3, &other_start, &Vec2(1, -1));
 
-            if (down_right == TARGET || down_right == TARGET_REV)
-                && (up_right == TARGET || up_right == TARGET_REV)
+            if (down_right.eq(TARGET) || down_right2.eq(TARGET_REV))
+                && (up_right.eq(TARGET) || up_right2.eq(TARGET_REV))
             {
                 return 1;
             }
