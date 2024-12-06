@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use itertools::Itertools;
 
@@ -43,24 +43,50 @@ fn parse_rule_line(input: &str) -> (u32, u32) {
     )
 }
 
-enum Rule {
-    Before(u32),
-    After(u32),
+struct RuleLookup {
+    befores: HashMap<u32, HashSet<u32>>,
+    afters: HashMap<u32, HashSet<u32>>,
 }
-
-struct RuleLookup(HashMap<u32, Vec<Rule>>)
 
 impl RuleLookup {
     fn new(input: &[(u32, u32)]) -> Self {
-        let befores = input.iter().map(|(b,x)| (*b, Rule::Before(*x)));
-        let afters = input.iter().map(|(x,a)| (*a, Rule::After(*x)));
+        let mut befores = HashMap::new();
+        for (k, v) in &input.iter().map(|(b, a)| (*a, *b)).chunk_by(|(b, _)| *b) {
+            let v: HashSet<u32> = v.map(|t| t.1).collect();
+            befores.insert(k, v);
+        }
 
-        Self(befores.concat(afters).group_by(|t| t.0).collect())
+        let mut afters = HashMap::new();
+        for (k, v) in &input.iter().map(|(b, a)| (*b, *a)).chunk_by(|(b, _)| *b) {
+            let v: HashSet<u32> = v.map(|t| t.1).collect();
+            afters.insert(k, v);
+        }
+
+        Self { befores, afters }
     }
-}
 
-pub fn is_valid_order(lookup: &RuleLookup, update: &[u32]) -> bool {
-    todo!()
+    fn is_valid_order(&self, update: &[u32]) -> bool {
+        let mut rest: HashSet<u32> = HashSet::from_iter(update.iter().copied());
+        let mut seen: HashSet<u32> = HashSet::new();
+        for i in 0..update.len() {
+            let n = update[i];
+
+            if let Some(befores) = self.befores.get(&n) {
+                if befores.intersection(&rest).next().is_some() {
+                    return false;
+                }
+            }
+            if let Some(afters) = self.afters.get(&n) {
+                if afters.intersection(&seen).next().is_some() {
+                    return false;
+                }
+            }
+
+            rest.remove(&n);
+            seen.insert(n);
+        }
+        true
+    }
 }
 
 pub fn middle(v: &[u32]) -> u32 {
@@ -70,7 +96,9 @@ pub fn middle(v: &[u32]) -> u32 {
 pub fn part_one(input: &str) -> Option<u32> {
     let input = parse(input);
 
-    let valid_updates = input.updates.iter().filter(|u| is_valid_order(&input, u));
+    let lookup = RuleLookup::new(&input.rules);
+
+    let valid_updates = input.updates.iter().filter(|x| lookup.is_valid_order(x));
 
     let middles = valid_updates.map(|u| middle(u));
 
