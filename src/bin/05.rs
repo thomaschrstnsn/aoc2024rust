@@ -65,27 +65,41 @@ impl RuleLookup {
         Self { befores, afters }
     }
 
-    fn is_valid_order(&self, update: &[u32]) -> bool {
+    fn invalid_order(&self, update: &[u32]) -> Option<(u32, u32)> {
         let mut rest: HashSet<u32> = HashSet::from_iter(update.iter().copied());
         let mut seen: HashSet<u32> = HashSet::new();
-        for i in 0..update.len() {
-            let n = update[i];
-
-            if let Some(befores) = self.befores.get(&n) {
-                if befores.intersection(&rest).next().is_some() {
-                    return false;
+        for n in update {
+            if let Some(befores) = self.befores.get(n) {
+                if let Some(should_be_before) = befores.intersection(&rest).next() {
+                    return Some((*should_be_before, *n));
                 }
             }
-            if let Some(afters) = self.afters.get(&n) {
-                if afters.intersection(&seen).next().is_some() {
-                    return false;
+            if let Some(afters) = self.afters.get(n) {
+                if let Some(should_be_after) = afters.intersection(&seen).next() {
+                    return Some((*n, *should_be_after));
                 }
             }
 
-            rest.remove(&n);
-            seen.insert(n);
+            rest.remove(n);
+            seen.insert(*n);
         }
-        true
+        None
+    }
+
+    fn is_valid_order(&self, update: &[u32]) -> bool {
+        self.invalid_order(update).is_none()
+    }
+
+    fn fix_ordering(&self, update: &[u32]) -> Vec<u32> {
+        let mut res = update.to_vec();
+
+        while let Some((a, b)) = self.invalid_order(&res) {
+            let a_index = res.iter().position(|x| *x == a).unwrap();
+            let b_index = res.iter().position(|x| *x == b).unwrap();
+            res.swap(a_index, b_index);
+        }
+
+        res
     }
 }
 
@@ -106,7 +120,21 @@ pub fn part_one(input: &str) -> Option<u32> {
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
-    None
+    let input = parse(input);
+
+    let lookup = RuleLookup::new(&input.rules);
+
+    let invalid_updates = input.updates.iter().filter(|u| !lookup.is_valid_order(u));
+
+    // println!("broken {:?}", invalid_updates.collect::<Vec<_>>());
+
+    let fixed_updates = invalid_updates.map(|iu| lookup.fix_ordering(iu));
+
+    // println!("fixed {:?}", invalid_updates..collect::<Vec<_>>());
+
+    let middles = fixed_updates.map(|u| middle(&u));
+
+    Some(middles.sum())
 }
 
 #[cfg(test)]
@@ -129,6 +157,6 @@ mod tests {
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(123));
     }
 }
