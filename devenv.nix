@@ -1,7 +1,7 @@
 { pkgs, lib, config, inputs, ... }:
 
 {
-  packages = with pkgs; [ figlet lolcat ];
+  packages = with pkgs; [ figlet lolcat bacon ];
 
   # https://devenv.sh/languages/
   languages.rust.enable = true;
