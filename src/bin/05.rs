@@ -124,17 +124,21 @@ pub fn part_two(input: &str) -> Option<u32> {
 
     let lookup = RuleLookup::new(&input.rules);
 
-    let invalid_updates = input.updates.iter().filter(|u| !lookup.is_valid_order(u));
+    let invalid_updates: Vec<_> = input
+        .updates
+        .iter()
+        .filter(|u| !lookup.is_valid_order(u))
+        .collect();
 
-    // println!("broken {:?}", invalid_updates.collect::<Vec<_>>());
+    let mut sum = 0;
+    for invalid in invalid_updates {
+        let fixed = lookup.fix_ordering(invalid);
+        println!("fixed: {:?}", fixed);
+        let middle = middle(&fixed);
+        sum += middle;
+    }
 
-    let fixed_updates = invalid_updates.map(|iu| lookup.fix_ordering(iu));
-
-    // println!("fixed {:?}", invalid_updates..collect::<Vec<_>>());
-
-    let middles = fixed_updates.map(|u| middle(&u));
-
-    Some(middles.sum())
+    Some(sum)
 }
 
 #[cfg(test)]
