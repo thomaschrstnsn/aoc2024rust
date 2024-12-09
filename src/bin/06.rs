@@ -18,7 +18,7 @@ impl Vec2<usize> {
     }
 }
 
-#[derive(Eq, Hash, PartialEq, Clone, Copy)]
+#[derive(Debug, Eq, Hash, PartialEq, Clone, Copy)]
 enum Direction {
     Up,
     Down,
@@ -65,6 +65,7 @@ impl<'a> Input<'a> {
     }
 }
 
+#[derive(Debug)]
 struct State {
     guard: Position,
     direction: Direction,
@@ -186,6 +187,6 @@ mod tests {
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, Some(4));
+        assert_eq!(result, Some(6));
     }
 }
