@@ -11,6 +11,19 @@ fn parse(input: &str) -> Vec<usize> {
         .collect()
 }
 
+fn splits_even(stone: usize) -> Option<(usize, usize)> {
+    let digits = stone.to_string();
+    if digits.len() % 2 == 0 {
+        let (first, second) = digits.split_at(digits.len() / 2);
+        let (first, second) = (
+            first.parse().expect("number"),
+            second.parse().expect("number"),
+        );
+        return Some((first, second));
+    }
+    None
+}
+
 struct Solution(HashMap<usize, usize>);
 
 impl Solution {
@@ -24,36 +37,26 @@ impl Solution {
         }
     }
 
+    fn add_count_to_stone(&mut self, stone: usize, count: usize) {
+        self.0
+            .entry(stone)
+            .and_modify(|c| *c += count)
+            .or_insert(count);
+    }
+
     fn blink_once(&mut self) {
         let mut prev = HashMap::new();
         mem::swap(&mut self.0, &mut prev);
 
         for (stone, count) in prev.into_iter() {
             if stone == 0 {
-                self.0.entry(1).and_modify(|c| *c += count).or_insert(count);
-                continue;
+                self.add_count_to_stone(1, count);
+            } else if let Some((first, second)) = splits_even(stone) {
+                self.add_count_to_stone(first, count);
+                self.add_count_to_stone(second, count);
+            } else {
+                self.add_count_to_stone(stone * 2024, count);
             }
-            let digits = stone.to_string();
-            if digits.len() % 2 == 0 {
-                let (first, second) = digits.split_at(digits.len() / 2);
-                let (first, second) = (
-                    first.parse().expect("number"),
-                    second.parse().expect("number"),
-                );
-                self.0
-                    .entry(first)
-                    .and_modify(|c| *c += count)
-                    .or_insert(count);
-                self.0
-                    .entry(second)
-                    .and_modify(|c| *c += count)
-                    .or_insert(count);
-                continue;
-            }
-            self.0
-                .entry(stone * 2024)
-                .and_modify(|c| *c += count)
-                .or_insert(count);
         }
     }
 
