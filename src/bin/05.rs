@@ -89,18 +89,6 @@ impl RuleLookup {
     fn is_valid_order(&self, update: &[u32]) -> bool {
         self.invalid_order(update).is_none()
     }
-
-    fn fix_ordering(&self, update: &[u32]) -> Vec<u32> {
-        let mut res = update.to_vec();
-
-        while let Some((a, b)) = self.invalid_order(&res) {
-            let a_index = res.iter().position(|x| *x == a).unwrap();
-            let b_index = res.iter().position(|x| *x == b).unwrap();
-            res.swap(a_index, b_index);
-        }
-
-        res
-    }
 }
 
 pub fn middle(v: &[u32]) -> u32 {
@@ -119,6 +107,31 @@ pub fn part_one(input: &str) -> Option<u32> {
     Some(middles.sum())
 }
 
+fn fix_ordering(rules: &[(u32, u32)], update: &[u32]) -> Vec<u32> {
+    let mut res = update.to_vec();
+    let mut swapped = false;
+    loop {
+        for (before, after) in rules.iter() {
+            res.iter()
+                .position(|x| x == before)
+                .and_then(|before_index| {
+                    res.iter().position(|x| x == after).map(|after_index| {
+                        if before_index > after_index {
+                            res.swap(before_index, after_index);
+                            swapped = true;
+                        }
+                    })
+                });
+        }
+        if !swapped {
+            break;
+        }
+        swapped = false;
+    }
+
+    res
+}
+
 pub fn part_two(input: &str) -> Option<u32> {
     let input = parse(input);
 
@@ -132,8 +145,7 @@ pub fn part_two(input: &str) -> Option<u32> {
 
     let mut sum = 0;
     for invalid in invalid_updates {
-        let fixed = lookup.fix_ordering(invalid);
-        println!("fixed: {:?}", fixed);
+        let fixed = fix_ordering(&input.rules, invalid);
         let middle = middle(&fixed);
         sum += middle;
     }
