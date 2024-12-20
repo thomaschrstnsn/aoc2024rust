@@ -66,16 +66,21 @@ impl Input {
 
     fn trailhead_score_by_destination(&self, p: &Position) -> usize {
         let mut visited_peaks: HashSet<Position> = HashSet::new();
-        self.trailhead_helper_by_destination(p, 0, &mut visited_peaks);
+        self.trailhead_helper(p, 0, &mut visited_peaks);
         visited_peaks.len()
     }
 
-    fn trailhead_helper_by_destination(
+    fn trailhead_score_by_path(&self, p: &Position) -> Option<usize> {
+        let mut visited_peaks: HashSet<Position> = HashSet::new();
+        self.trailhead_helper(p, 0, &mut visited_peaks)
+    }
+
+    fn trailhead_helper(
         &self,
         p: &Position,
         level: u8,
-        mut visited_peaks: &mut HashSet<Position>,
-    ) -> Option<()> {
+        visited_peaks: &mut HashSet<Position>,
+    ) -> Option<usize> {
         let value = self.get(p)?;
         if value != level {
             return None;
@@ -83,36 +88,6 @@ impl Input {
 
         if value == 9 {
             visited_peaks.insert(*p);
-            return None;
-        }
-
-        let next_level = level + 1;
-        let _result = [
-            Direction::Up,
-            Direction::Down,
-            Direction::Left,
-            Direction::Right,
-        ]
-        .into_iter()
-        .filter_map(|d| p.add_direction(d))
-        .filter_map(|next_p| {
-            self.trailhead_helper_by_destination(&next_p, next_level, &mut visited_peaks)
-        })
-        .last();
-        Some(())
-    }
-
-    fn trailhead_score_by_path(&self, p: &Position) -> Option<usize> {
-        self.trailhead_helper_by_path(p, 0)
-    }
-
-    fn trailhead_helper_by_path(&self, p: &Position, level: u8) -> Option<usize> {
-        let value = self.get(p)?;
-        if value != level {
-            return None;
-        }
-
-        if value == 9 {
             return Some(1);
         }
 
@@ -125,7 +100,7 @@ impl Input {
         ]
         .into_iter()
         .filter_map(|d| p.add_direction(d))
-        .filter_map(|next_p| self.trailhead_helper_by_path(&next_p, next_level))
+        .filter_map(|next_p| self.trailhead_helper(&next_p, next_level, visited_peaks))
         .sum();
         Some(result)
     }
