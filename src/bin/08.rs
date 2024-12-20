@@ -26,12 +26,6 @@ impl Vec2<usize> {
 
 type Direction = Vec2<isize>;
 
-impl Vec2<isize> {
-    fn mult(&self, m: isize) -> Self {
-        Self(self.0 * m, self.1 * m)
-    }
-}
-
 type Position = Vec2<usize>;
 
 #[derive(Debug)]
@@ -81,7 +75,9 @@ impl TryFrom<&str> for Input {
     }
 }
 
-fn antinodes_for_type<'a>(antennas: &'a [&'a Antenna]) -> impl Iterator<Item = Position> + use<'a> {
+fn antinodes_for_groups_first<'a>(
+    antennas: &'a [&'a Antenna],
+) -> impl Iterator<Item = Position> + use<'a> {
     antennas
         .iter()
         .tuple_combinations()
@@ -97,6 +93,48 @@ fn antinodes_for_type<'a>(antennas: &'a [&'a Antenna]) -> impl Iterator<Item = P
         .flatten()
 }
 
+fn antinodes_for_groups_all<'a>(
+    antennas: &'a [&'a Antenna],
+    dimensions: &Position,
+) -> Vec<Position> {
+    antennas
+        .iter()
+        .tuple_combinations()
+        .flat_map(|(a, b)| {
+            let delta_ab = a.position.subtract(&b.position);
+
+            let delta_ba = b.position.subtract(&a.position);
+
+            let mut result = vec![a.position, b.position];
+
+            let mut antinode_a = b.position.add_signed(&delta_ba);
+            loop {
+                if let Some(an_a) = antinode_a {
+                    if an_a.0 < dimensions.0 && an_a.1 < dimensions.1 {
+                        result.push(an_a);
+                        antinode_a = an_a.add_signed(&delta_ba);
+                        continue;
+                    }
+                }
+                break;
+            }
+            let mut antinode_b = a.position.add_signed(&delta_ab);
+            loop {
+                if let Some(an_b) = antinode_b {
+                    if an_b.0 < dimensions.0 && an_b.1 < dimensions.1 {
+                        result.push(an_b);
+                        antinode_b = an_b.add_signed(&delta_ab);
+                        continue;
+                    }
+                }
+                break;
+            }
+
+            result.into_iter()
+        })
+        .collect()
+}
+
 impl Input {
     fn group_by_type(&self) -> HashMap<char, Vec<&Antenna>> {
         let mut result = HashMap::new();
@@ -108,38 +146,41 @@ impl Input {
         }
         result
     }
-    fn antinodes(&self) -> HashSet<Position> {
+    fn antinodes_first(&self) -> HashSet<Position> {
         let mut antinodes = HashSet::new();
         let group_by_type = self.group_by_type();
         for (_, chunk) in group_by_type {
-            for anti in antinodes_for_type(&chunk) {
+            for anti in antinodes_for_groups_first(&chunk) {
                 if anti.0 < self.dimensions.0 && anti.1 < self.dimensions.1 {
                     antinodes.insert(anti);
                 }
             }
         }
         antinodes
+    }
 
-        // self.antennas
-        //     .iter()
-        //     .chunk_by(|a| a.typ)
-        //     .into_iter()
-        //     .flat_map(|(_, g)| {
-        //         antinodes_for_type(&g.collect::<Vec<&Antenna>>()).collect::<Vec<_>>()
-        //     })
-        //     .filter(|Vec2(x, y)| *x <= self.dimensions.0 && *y <= self.dimensions.1)
-        //     .collect()
+    fn antinodes_all(&self) -> HashSet<Position> {
+        let mut antinodes = HashSet::new();
+        let group_by_type = self.group_by_type();
+        for (_, chunk) in group_by_type {
+            for anti in antinodes_for_groups_all(&chunk, &self.dimensions) {
+                antinodes.insert(anti);
+            }
+        }
+        antinodes
     }
 }
 
 pub fn part_one(input: &str) -> Option<usize> {
     let input: Input = input.try_into().ok()?;
-    let antinodes = input.antinodes();
+    let antinodes = input.antinodes_first();
     antinodes.len().into()
 }
 
 pub fn part_two(input: &str) -> Option<usize> {
-    None
+    let input: Input = input.try_into().ok()?;
+    let antinodes = input.antinodes_all();
+    antinodes.len().into()
 }
 
 #[cfg(test)]
@@ -155,6 +196,6 @@ mod tests {
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(34));
     }
 }
