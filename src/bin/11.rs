@@ -12,13 +12,12 @@ fn parse(input: &str) -> Vec<usize> {
 }
 
 fn splits_even(stone: usize) -> Option<(usize, usize)> {
-    let digits = stone.to_string();
-    if digits.len() % 2 == 0 {
-        let (first, second) = digits.split_at(digits.len() / 2);
-        let (first, second) = (
-            first.parse().expect("number"),
-            second.parse().expect("number"),
-        );
+    let num_digits = stone.ilog10() + 1;
+    if num_digits % 2 == 0 {
+        let mid = num_digits / 2;
+        let divisor = 10usize.pow(mid);
+        let first = stone / divisor;
+        let second = stone % divisor;
         return Some((first, second));
     }
     None
