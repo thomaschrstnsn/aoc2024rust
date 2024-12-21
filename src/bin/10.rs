@@ -66,20 +66,21 @@ impl Input {
 
     fn trailhead_score_by_destination(&self, p: &Position) -> usize {
         let mut visited_peaks: HashSet<Position> = HashSet::new();
-        self.trailhead_helper(p, 0, &mut visited_peaks);
+        self.trailhead_helper(p, 0, &mut |p| {
+            visited_peaks.insert(*p);
+        });
         visited_peaks.len()
     }
 
     fn trailhead_score_by_path(&self, p: &Position) -> Option<usize> {
-        let mut visited_peaks: HashSet<Position> = HashSet::new();
-        self.trailhead_helper(p, 0, &mut visited_peaks)
+        self.trailhead_helper(p, 0, &mut |_| {})
     }
 
     fn trailhead_helper(
         &self,
         p: &Position,
         level: u8,
-        visited_peaks: &mut HashSet<Position>,
+        peak_visitor: &mut impl FnMut(&Position),
     ) -> Option<usize> {
         let value = self.get(p)?;
         if value != level {
@@ -87,7 +88,7 @@ impl Input {
         }
 
         if value == 9 {
-            visited_peaks.insert(*p);
+            peak_visitor(p);
             return Some(1);
         }
 
@@ -100,7 +101,7 @@ impl Input {
         ]
         .into_iter()
         .filter_map(|d| p.add_direction(d))
-        .filter_map(|next_p| self.trailhead_helper(&next_p, next_level, visited_peaks))
+        .filter_map(|next_p| self.trailhead_helper(&next_p, next_level, peak_visitor))
         .sum();
         Some(result)
     }
