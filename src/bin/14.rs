@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 advent_of_code::solution!(14);
 
 #[derive(Debug, PartialEq, Eq)]
@@ -126,6 +128,60 @@ impl TryFrom<&str> for Robot {
 
 struct Input(Vec<Robot>);
 
+impl Input {
+    fn has_frame_top_and_bottom(&self, bounds: &Bounds) -> bool {
+        let cap = 31;
+
+        let mut has_top = false;
+        let mut has_bottom = false;
+        for row in 0..(bounds.rows as i64) {
+            let xs = self
+                .0
+                .iter()
+                .map(|r| r.position)
+                .filter(|p| p.1 == row)
+                .unique_by(|p| p.0)
+                .count();
+
+            if xs >= cap {
+                if has_top {
+                    has_bottom = true;
+                    break;
+                } else {
+                    has_top = true
+                }
+            }
+        }
+        has_top && has_bottom
+    }
+
+    fn has_frame_sides(&self, bounds: &Bounds) -> bool {
+        let cap = 20;
+
+        let mut has_left = false;
+        let mut has_right = false;
+        for col in 0..(bounds.columns as i64) {
+            let ys = self
+                .0
+                .iter()
+                .map(|r| r.position)
+                .filter(|p| p.0 == col)
+                .unique_by(|p| p.1)
+                .count();
+
+            if ys >= cap {
+                if has_left {
+                    has_right = true;
+                    break;
+                } else {
+                    has_left = true
+                }
+            }
+        }
+        has_left && has_right
+    }
+}
+
 impl TryFrom<&str> for Input {
     type Error = String;
 
@@ -165,7 +221,23 @@ pub fn part_one(input: &str) -> Option<usize> {
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
-    None
+    let mut input: Input = input.try_into().expect("parses");
+
+    let bounds = Bounds {
+        columns: 101,
+        rows: 103,
+    };
+    let mut t = 0;
+    loop {
+        if input.has_frame_top_and_bottom(&bounds) && input.has_frame_sides(&bounds) {
+            break;
+        }
+        for robot in &mut input.0 {
+            robot.position = robot.position.add_capped(&robot.direction, &bounds);
+        }
+        t += 1;
+    }
+    Some(t)
 }
 
 #[cfg(test)]
